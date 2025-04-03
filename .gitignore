@@ -176,3 +176,6 @@ output/
 wandb/
 swanlog/
 generated_predictions.jsonl
+
+data/clevr_r1_data
+data/clevr_r1.json
