@@ -16,7 +16,7 @@ deepspeed: examples/deepspeed/ds_z2_config.json
 dataset: clevr_r1
 template: qwen2_vl
 cutoff_len: 16384
-# max_samples: 1000
+# max_samples: 1000 # to limit dataset samples
 overwrite_cache: true
 preprocessing_num_workers: 16
 dataloader_num_workers: 4
@@ -25,6 +25,7 @@ dataloader_num_workers: 4
 output_dir: ckpts/qwen25_vl-3b/lora/sft
 logging_steps: 10
 save_steps: 500
+save_total_limit: 1
 plot_loss: true
 overwrite_output_dir: true
 save_only_model: false
@@ -43,8 +44,8 @@ resume_from_checkpoint: null
 report_to: wandb
 run_name: qwen25_vl-3b_sft_clevr_r1
 
-### eval
-val_size: 0.05
-per_device_eval_batch_size: 1
-eval_strategy: steps
-eval_steps: 500
+# ### eval
+# val_size: 0.05
+# per_device_eval_batch_size: 1
+# eval_strategy: steps
+# eval_steps: 500
