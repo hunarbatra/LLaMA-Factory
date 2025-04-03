@@ -172,6 +172,7 @@ om_cache/
 cache/
 config/
 saves/
+ckpts/
 output/
 wandb/
 swanlog/
