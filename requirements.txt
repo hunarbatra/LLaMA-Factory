@@ -26,3 +26,5 @@ pydantic<=2.10.6
 av
 librosa
 tyro<0.9.0
+wandb
+deepspeed==0.16.4
