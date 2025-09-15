@@ -59,7 +59,8 @@ class DatasetType(Enum):
     LEGO = "lego"
     MATHVISTA_MCQ = "mathvista_mcq"
     MATHVERSE_VISION_MCQ = "mathverse_vision_mcq"
-    MMMU_PRO = "mmmu_pro"
+    MMMU_PRO = "mmmu_pro" # standard
+    MMMU_PRO_VISION_ONLY = "mmmu_pro_vision_only"
 
 @dataclass
 class DatasetConfig:
@@ -402,6 +403,15 @@ def get_dataset_config(dataset_type: DatasetType) -> DatasetConfig:
             task_field="topic_difficulty",
             tasks={"Easy": 528, "Medium": 801, "Hard": 401}
         ),
+        DatasetType.MMMU_PRO_VISION_ONLY: DatasetConfig(
+            name="MMMU/MMMU_Pro",
+            split="test",
+            subset="vision",
+            image_field="image",
+            # instruction_field="question",
+            response_field="answer",
+            choices_field="options",
+        ),
         DatasetType.MATHVISTA: DatasetConfig(
             name="AI4Math/MathVista",
             split="testmini",
@@ -495,7 +505,7 @@ def load_image_dataset(dataset_config: DatasetConfig) -> List[Dict]:
         else:
             data = load_dataset(dataset_config.name, split=dataset_config.split)
             
-        if dataset_config.choices_field and data.features[dataset_config.choices_field] == Value("string"): # e.g. needed for MMMU_Pro
+        if dataset_config.choices_field and data.features[dataset_config.choices_field] == Value("string"): # e.g. needed for MMMU_Pro and MMMU_Pro_Vision_Only
             data = data.map(lambda x: {dataset_config.choices_field: ast.literal_eval(x[dataset_config.choices_field])})
             print(f'Updated dataset choices field to list: {data.features[dataset_config.choices_field]}')
         
@@ -597,7 +607,7 @@ def main():
     parser = argparse.ArgumentParser(description='Evaluate model on various math datasets')
     parser.add_argument('--cuda', type=int, default=0, help='CUDA device number to use')
     parser.add_argument('--batch_size', type=int, default=1, help='Batch size for processing')
-    parser.add_argument('--dataset', type=str, choices=['mathvista', 'mathverse', 'mathvision', 'sftseed', 'hallusionbench', 'emma-math', 'emma-chem', 'emma-code', 'emma-physics', 'mmmu-pro-vision', 'cv-bench', 'cv-bench-2D', 'cv-bench-3D', 'blink-spatial', 'blink-depth', 'blink-object', 'blink-counting', 'realworld_qa', 'spatialbench', 'mmvp', '3dsrbench', '3dsrbench_full', 'lego', 'mathvista_mcq', 'mathverse_vision_mcq', 'mmmu_pro'],
+    parser.add_argument('--dataset', type=str, choices=['mathvista', 'mathverse', 'mathvision', 'sftseed', 'hallusionbench', 'emma-math', 'emma-chem', 'emma-code', 'emma-physics', 'mmmu-pro-vision', 'cv-bench', 'cv-bench-2D', 'cv-bench-3D', 'blink-spatial', 'blink-depth', 'blink-object', 'blink-counting', 'realworld_qa', 'spatialbench', 'mmvp', '3dsrbench', '3dsrbench_full', 'lego', 'mathvista_mcq', 'mathverse_vision_mcq', 'mmmu_pro', 'mmmu_pro_vision_only'],
                       default='cv-bench', help='Dataset to evaluate on')
     parser.add_argument('--model_path', type=str, help='Path to the model', default="Qwen/Qwen2.5-VL-3B-Instruct")
     parser.add_argument('--num_samples', type=int, default=None, help='Number of samples to evaluate')
@@ -675,7 +685,7 @@ def main():
             elif dataset_type == DatasetType.MMMU_PRO_VISION:
                 formatted_instruction = format_instruction(item['instruction'], item.get('options'), vision=True)
                 
-            elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO]:
+            elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO, DatasetType.MMMU_PRO_VISION_ONLY]:
                 if template == "reasoning":
                     formatted_instruction = format_instruction(item['instruction'], choices=item.get('choices'), image_url=item['image_url'], reasoning=True)
                 elif template == "spatial_thinker":
@@ -688,6 +698,11 @@ def main():
                     formatted_instruction += "\nOptions:\n(A) Yes \n(B) No"
                 if dataset_type == DatasetType.MMMU_PRO:
                     formatted_instruction += "\nOptions:" + "\n".join(f"({chr(i+65)}) {option}" for i, option in enumerate(item['choices']))
+                if dataset_type == DatasetType.MMMU_PRO_VISION_ONLY:
+                    prompt_hint = "Please answer the question shown in the image."
+                    if args.template == "no_reasoning":
+                        prompt_hint += " Please give the final answer within answer tags, e.g., <answer> ({correct_option}) {correct_answer} </answer>."
+                    formatted_instruction += f"{prompt_hint}\nOptions:" + "\n".join(f"({chr(i+65)}) {option}" for i, option in enumerate(item['choices']))
             elif dataset_type == DatasetType.REALWORLD_QA:
                 if template == "reasoning":
                     formatted_instruction = format_instruction(item['instruction'], image_url=item['image_url'], reasoning=True)
