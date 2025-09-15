@@ -28,3 +28,5 @@ librosa
 tyro<0.9.0
 wandb
 deepspeed==0.16.4
+typing_extensions
+qwen_vl_utils
