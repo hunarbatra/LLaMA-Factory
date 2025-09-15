@@ -75,7 +75,9 @@ extra_require = {
     "openmind": ["openmind"],
     "swanlab": ["swanlab"],
     "wandb": ["wandb"],
-    "dev": ["pre-commit", "ruff", "pytest"]
+    "dev": ["pre-commit", "ruff", "pytest"],
+    "typing_extensions": ["typing_extensions"],
+    "qwen_vl_utils": ["qwen_vl_utils"]
 }
 
 
