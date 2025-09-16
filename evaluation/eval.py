@@ -63,6 +63,7 @@ class DatasetType(Enum):
     MATHVERSE_VISION_MCQ = "mathverse_vision_mcq"
     MMMU_PRO = "mmmu_pro" # standard
     MMMU_PRO_VISION_ONLY = "mmmu_pro_vision_only"
+    SPATIALREASONER_EVAL = "spatialreasoner"
 
 @dataclass
 class DatasetConfig:
@@ -333,6 +334,16 @@ def get_dataset_config(dataset_type: DatasetType) -> DatasetConfig:
             response_field="answer",
             choices_field="choices",
         ),
+        DatasetType.SPATIALREASONER_EVAL : DatasetConfig(
+            name="hunarbatra/SpatialReasonerEval",
+            split="train",
+            image_field="image",
+            instruction_field="prompt",
+            response_field="answer",
+            choices_field="choices",
+            task_field="task",
+            tasks={"Depth": 600, "Distance": 600}
+        ),
         DatasetType.BENCH_3DSR: DatasetConfig(
             name="hunarbatra/3DSRBench",
             split="test",
@@ -525,7 +536,7 @@ def load_image_dataset(dataset_config: DatasetConfig) -> List[Dict]:
         else:
             data = load_dataset(dataset_config.name, split=dataset_config.split)
             
-        if dataset_config.choices_field and data.features[dataset_config.choices_field] == Value("string"): # e.g. needed for MMMU_Pro and MMMU_Pro_Vision_Only
+        if dataset_config.choices_field and data.features[dataset_config.choices_field] == Value("string"): # e.g. needed for MMMU_Pro and MMMU_Pro_Vision_Only and SpatialReasoner
             data = data.map(lambda x: {dataset_config.choices_field: ast.literal_eval(x[dataset_config.choices_field])})
             print(f'Updated dataset choices field to list: {data.features[dataset_config.choices_field]}')
         
@@ -630,7 +641,7 @@ def main():
     parser = argparse.ArgumentParser(description='Evaluate model on various math datasets')
     parser.add_argument('--cuda', type=int, default=0, help='CUDA device number to use')
     parser.add_argument('--batch_size', type=int, default=1, help='Batch size for processing')
-    parser.add_argument('--dataset', type=str, choices=['mathvista', 'mathverse', 'mathvision', 'sftseed', 'hallusionbench', 'emma-math', 'emma-chem', 'emma-code', 'emma-physics', 'mmmu-pro-vision', 'cv-bench', 'cv-bench-2D', 'cv-bench-3D', 'blink-spatial', 'blink-depth', 'blink-object', 'blink-counting', 'blink-multi-view', 'blink-jigsaw', 'realworld_qa', 'spatialbench', 'mmvp', '3dsrbench', '3dsrbench_full', 'lego', 'mathvista_mcq', 'mathverse_vision_mcq', 'mmmu_pro', 'mmmu_pro_vision_only'],
+    parser.add_argument('--dataset', type=str, choices=['mathvista', 'mathverse', 'mathvision', 'sftseed', 'hallusionbench', 'emma-math', 'emma-chem', 'emma-code', 'emma-physics', 'mmmu-pro-vision', 'cv-bench', 'cv-bench-2D', 'cv-bench-3D', 'blink-spatial', 'blink-depth', 'blink-object', 'blink-counting', 'blink-multi-view', 'blink-jigsaw', 'realworld_qa', 'spatialbench', 'mmvp', '3dsrbench', '3dsrbench_full', 'lego', 'mathvista_mcq', 'mathverse_vision_mcq', 'mmmu_pro', 'mmmu_pro_vision_only', 'spatialreasoner'],
                       default='cv-bench', help='Dataset to evaluate on')
     parser.add_argument('--model_path', type=str, help='Path to the model', default="Qwen/Qwen2.5-VL-3B-Instruct")
     parser.add_argument('--num_samples', type=int, default=None, help='Number of samples to evaluate')
@@ -708,7 +719,7 @@ def main():
             elif dataset_type == DatasetType.MMMU_PRO_VISION:
                 formatted_instruction = format_instruction(item['instruction'], item.get('options'), vision=True)
                 
-            elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BLINK_MULTI_VIEW, DatasetType.BLINK_JIGSAW, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO, DatasetType.MMMU_PRO_VISION_ONLY]:
+            elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BLINK_MULTI_VIEW, DatasetType.BLINK_JIGSAW, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO, DatasetType.MMMU_PRO_VISION_ONLY, DatasetType.SPATIALREASONER_EVAL]:
                 if template == "reasoning":
                     formatted_instruction = format_instruction(item['instruction'], choices=item.get('choices'), image_url=item['image_url'], reasoning=True)
                 elif template == "spatial_thinker":
@@ -798,7 +809,7 @@ def main():
                     # ground truth answer
                     processed_response = item['response'].strip()
                     answer = answer.strip()
-                elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BLINK_MULTI_VIEW, DatasetType.BLINK_JIGSAW, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO]:
+                elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BLINK_MULTI_VIEW, DatasetType.BLINK_JIGSAW, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO, DatasetType.MMMU_PRO_VISION_ONLY, DatasetType.SPATIALREASONER_EVAL]:
                     # response is e.g. (A), remove braces, strip
                     
                     if dataset_type != DatasetType.MATHVISTA:
@@ -849,7 +860,6 @@ def main():
                         item.get('choices'),
                         item.get('options')
                     )
-                
                 
                 if processed_response.lower() == answer.lower() or grade_answer(processed_response, answer) or extract_answer(processed_response, answer):
                     correct += 1
