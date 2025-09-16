@@ -116,7 +116,7 @@ class ImageProcessor:
             logger.error(f"Failed to load processor: {str(e)}")
             raise
 
-    def generate_answer(self, image_url: str, instruction: str) -> Optional[str]:
+    def generate_answer(self, image_url: str | list[str], instruction: str) -> Optional[str]:
         try:
             if isinstance(image_url, list):
                 content = [
