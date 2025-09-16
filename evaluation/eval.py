@@ -594,7 +594,10 @@ def format_instruction(instruction: str, options: Optional[List[str]] = None, ch
         return f"Question: {instruction}\n{prompt_hint}"
     elif spatial_thinker: 
         prompt_prefix = SPATIAL_THINKER_TEMPLATE
-        width, height = image_url.size
+        if isinstance(image_url, list):
+            width, height = image_url[0].size
+        else:
+            width, height = image_url.size
         question = f"({width} x {height})\n\nNow answer the following question:\n{instruction}"
         return f"{prompt_prefix}\n{question}"
     elif options and len(options) > 0:
