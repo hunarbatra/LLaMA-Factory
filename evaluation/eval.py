@@ -53,6 +53,7 @@ class DatasetType(Enum):
     BLINK_DEPTH = "blink-depth"
     BLINK_OBJECT = "blink-object"
     BLINK_COUNTING = "blink-counting"
+    BLINK_MULTI_VIEW = "blink-multi-view"
     REALWORLD_QA = "realworld_qa"
     SPATIALBENCH = "spatialbench"
     MMVP = "mmvp"
@@ -309,6 +310,15 @@ def get_dataset_config(dataset_type: DatasetType) -> DatasetConfig:
             split="val",
             subset="Relative_Depth",
             image_field="image_1",
+            instruction_field="prompt",
+            response_field="answer",
+            choices_field="choices",
+        ),
+        DatasetType.BLINK_MULTI_VIEW: DatasetConfig(
+            name="BLINK-Benchmark/BLINK",
+            split="val",
+            subset="Multi-view_Reasoning",
+            image_field=["image_1", "image_2"],
             instruction_field="prompt",
             response_field="answer",
             choices_field="choices",
@@ -607,7 +617,7 @@ def main():
     parser = argparse.ArgumentParser(description='Evaluate model on various math datasets')
     parser.add_argument('--cuda', type=int, default=0, help='CUDA device number to use')
     parser.add_argument('--batch_size', type=int, default=1, help='Batch size for processing')
-    parser.add_argument('--dataset', type=str, choices=['mathvista', 'mathverse', 'mathvision', 'sftseed', 'hallusionbench', 'emma-math', 'emma-chem', 'emma-code', 'emma-physics', 'mmmu-pro-vision', 'cv-bench', 'cv-bench-2D', 'cv-bench-3D', 'blink-spatial', 'blink-depth', 'blink-object', 'blink-counting', 'realworld_qa', 'spatialbench', 'mmvp', '3dsrbench', '3dsrbench_full', 'lego', 'mathvista_mcq', 'mathverse_vision_mcq', 'mmmu_pro', 'mmmu_pro_vision_only'],
+    parser.add_argument('--dataset', type=str, choices=['mathvista', 'mathverse', 'mathvision', 'sftseed', 'hallusionbench', 'emma-math', 'emma-chem', 'emma-code', 'emma-physics', 'mmmu-pro-vision', 'cv-bench', 'cv-bench-2D', 'cv-bench-3D', 'blink-spatial', 'blink-depth', 'blink-object', 'blink-counting', 'blink-multi-view', 'realworld_qa', 'spatialbench', 'mmvp', '3dsrbench', '3dsrbench_full', 'lego', 'mathvista_mcq', 'mathverse_vision_mcq', 'mmmu_pro', 'mmmu_pro_vision_only'],
                       default='cv-bench', help='Dataset to evaluate on')
     parser.add_argument('--model_path', type=str, help='Path to the model', default="Qwen/Qwen2.5-VL-3B-Instruct")
     parser.add_argument('--num_samples', type=int, default=None, help='Number of samples to evaluate')
@@ -685,7 +695,7 @@ def main():
             elif dataset_type == DatasetType.MMMU_PRO_VISION:
                 formatted_instruction = format_instruction(item['instruction'], item.get('options'), vision=True)
                 
-            elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO, DatasetType.MMMU_PRO_VISION_ONLY]:
+            elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BLINK_MULTI_VIEW, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO, DatasetType.MMMU_PRO_VISION_ONLY]:
                 if template == "reasoning":
                     formatted_instruction = format_instruction(item['instruction'], choices=item.get('choices'), image_url=item['image_url'], reasoning=True)
                 elif template == "spatial_thinker":
@@ -775,7 +785,7 @@ def main():
                     # ground truth answer
                     processed_response = item['response'].strip()
                     answer = answer.strip()
-                elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO]:
+                elif dataset_type in [DatasetType.CV_BENCH_2D, DatasetType.CV_BENCH_3D, DatasetType.CV_BENCH, DatasetType.BLINK_SPATIAL, DatasetType.BLINK_DEPTH, DatasetType.BLINK_COUNTING, DatasetType.BLINK_OBJECT, DatasetType.BLINK_MULTI_VIEW, DatasetType.BENCH_3DSR, DatasetType.BENCH_3DSR_FULL, DatasetType.MATHVISTA, DatasetType.EMMA_MATH, DatasetType.LEGO, DatasetType.MATHVISTA_MCQ, DatasetType.MATHVERSE_VISION_MCQ, DatasetType.HALLUSIONBENCH, DatasetType.MMMU_PRO]:
                     # response is e.g. (A), remove braces, strip
                     
                     if dataset_type != DatasetType.MATHVISTA:
